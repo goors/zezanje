@@ -2,25 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset='utf-8' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.css' rel='stylesheet' />
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+    <title>Number of points</title>
     <style>
         body, html {
             min-height: 100vh;
             padding: 0;
             margin: 0;
+            height: 100%;
+            position: relative;
         }
-        iframe {
+        #map {
             width: 100%;
             height: 100vh;
 
 
         }
-        iframe > header {
-            display: none !important;
+
+        #points_container {
+
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            width: 90%;
+            max-width: 90%; /* Optional: Set maximum width */
+            text-align: center; /* Center text horizontally */
+            z-index: 1;
         }
+
+        #points_no {
+            font-weight: bold;
+        }
+
+        .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right{
+            display: none;
+        }
+
+        #points_container.none {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
-<script async src="//jsfiddle.net/nikola031/5kf1jo9d/14/embed/result/"></script>
+<div>
+    <div id="points_container" class="none">Number of points <span id="points_no"></span></div>
+    <div id="map"></div>
+</div>
+<script>
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaW1tb2Nvc21vcyIsImEiOiJjamV5bXF3dHowMG5jMndtcjFnYW5obzlkIn0.UyR9drvqyGXhHCllqmvMCA';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [19.2594, 42.4304],
+        zoom: 8,
+        maxZoom: 14.8,
+        hash: true,
+        pitch: 45
+    });
+
+    map.on("load", function() {
+        map.addSource("places", {
+            "type": "geojson",
+            "data": "https://gist.githubusercontent.com/goors/cd722b4862782631da9c29adbe739fe9/raw/14f79cec28cd03c3f02ebd7b07e86b79020ca5de/gistfile2.txt"
+        });
+
+
+        map.addLayer({
+            "id": "places",
+            "type": "circle",
+            "source": "places",
+            "paint": {
+                "circle-radius": 5,
+                "circle-color": "#3a6cff",
+                'circle-stroke-color': '#000', // Border color
+                'circle-stroke-width': 1 // Width of the border in pixels
+            }
+        });
+
+        map.on('click', 'places', function(e) {
+            const features = map.queryRenderedFeatures(e.point, { layers: ['places'] });
+            if (!features.length) {
+                return;
+            }
+
+            const clickedFeature = features[0];
+            // Do something with the clicked feature
+            console.log(clickedFeature);
+        });
+        map.on('mouseenter', 'places', function() {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'places', function() {
+            map.getCanvas().style.cursor = '';
+        });
+
+        map.on('data', function(e) {
+            if (e.sourceId === 'places' && e.isSourceLoaded) {
+
+                let sourceFeatures = map.querySourceFeatures('places');
+                let uniqueIds = new Set(sourceFeatures.map(r => r.properties?.id));
+
+                document.getElementById("points_no").innerText = uniqueIds.size;
+                document.getElementById("points_container").classList.remove("none");
+            }
+        });
+    });
+
+
+
+</script>
 </body>
 </html>
