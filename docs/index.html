@@ -71,11 +71,65 @@
     map.on("load", function() {
         map.addSource("places", {
             "type": "geojson",
-            "data": "https://gist.githubusercontent.com/goors/cd722b4862782631da9c29adbe739fe9/raw/14f79cec28cd03c3f02ebd7b07e86b79020ca5de/gistfile2.txt"
+            "data": "https://gist.githubusercontent.com/goors/cd722b4862782631da9c29adbe739fe9/raw/abe683d118b8e671701cf34b84006ac23ce44c30/gis.json",
+            cluster: true,
+            clusterMaxZoom: 14, // Max zoom to cluster points on
+            clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
         });
 
+        map.addLayer({
+            id: 'clusters',
+            type: 'circle',
+            source: 'places',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': [
+                    'step',
+                    ['get', 'point_count'],
+                    '#51bbd6',
+                    100,
+                    '#f1f075',
+                    750,
+                    '#f28cb1'
+                ],
+                'circle-radius': [
+                    'step',
+                    ['get', 'point_count'],
+                    20,
+                    100,
+                    30,
+                    750,
+                    40
+                ]
+            }
+        });
 
         map.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: 'places',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': '{point_count_abbreviated}',
+                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                'text-size': 12
+            }
+        });
+
+        map.addLayer({
+            id: 'unclustered-point',
+            type: 'circle',
+            source: 'places',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': '#11b4da',
+                'circle-radius': 4,
+                'circle-stroke-width': 1,
+                'circle-stroke-color': '#fff'
+            }
+        });
+
+        /* map.addLayer({
             "id": "places",
             "type": "circle",
             "source": "places",
@@ -85,9 +139,46 @@
                 'circle-stroke-color': '#000', // Border color
                 'circle-stroke-width': 1 // Width of the border in pixels
             }
+        }); */
+
+        map.on('click', 'clusters', function (e) {
+            var features = map.queryRenderedFeatures(e.point, {
+                layers: ['clusters']
+            });
+            var clusterId = features[0].properties.cluster_id;
+            map.getSource('places').getClusterExpansionZoom(clusterId, function (err, zoom) {
+                if (err)
+                    return;
+                map.easeTo({
+                    center: features[0].geometry.coordinates,
+                    zoom: zoom
+                });
+            });
         });
 
-        map.on('click', 'places', function(e) {
+        map.on('click', 'unclustered-point', function (e) {
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var popupContent = '<h3>Coordinates:</h3><p>' + coordinates + '</p>';
+            new mapboxgl.Popup()
+                .setLngLat(coordinates)
+                .setHTML(popupContent)
+                .addTo(map);
+        });
+
+        map.on('mouseenter', 'clusters', function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'clusters', function () {
+            map.getCanvas().style.cursor = '';
+        });
+        map.on('mouseenter', 'unclustered-point', function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', 'unclustered-point', function () {
+            map.getCanvas().style.cursor = '';
+        });
+
+        /*map.on('click', 'places', function(e) {
             const features = map.queryRenderedFeatures(e.point, { layers: ['places'] });
             if (!features.length) {
                 return;
@@ -103,7 +194,7 @@
 
         map.on('mouseleave', 'places', function() {
             map.getCanvas().style.cursor = '';
-        });
+        });*/
 
         map.on('data', function(e) {
             if (e.sourceId === 'places' && e.isSourceLoaded) {
