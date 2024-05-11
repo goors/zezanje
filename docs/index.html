@@ -25,7 +25,7 @@
         #points_container {
 
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 50%;
             transform: translateX(-50%);
             background-color: #f0f0f0;
@@ -73,8 +73,6 @@
             "type": "geojson",
             "data": "https://gist.githubusercontent.com/goors/cd722b4862782631da9c29adbe739fe9/raw/abe683d118b8e671701cf34b84006ac23ce44c30/gis.json",
             cluster: true,
-            clusterMaxZoom: 14, // Max zoom to cluster points on
-            clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
         });
 
         map.addLayer({
@@ -196,7 +194,24 @@
             map.getCanvas().style.cursor = '';
         });*/
 
-        map.on('data', function(e) {
+        map.on('sourcedata', function(e) {
+            if (e.sourceId === 'places' && e.isSourceLoaded) {
+                var features = map.querySourceFeatures('places');
+                var clusterCount = 0;
+                features.forEach(function(feature) {
+                    if (feature.properties.cluster) {
+                        clusterCount += feature.properties.point_count;
+                    } else {
+                        clusterCount++; // Individual feature
+                    }
+                });
+                document.getElementById("points_no").innerText = clusterCount;
+                document.getElementById("points_container").classList.remove("none");
+                console.log('Number of features (including clusters):', clusterCount);
+            }
+        });
+
+        /*map.on('data', function(e) {
             if (e.sourceId === 'places' && e.isSourceLoaded) {
 
                 let sourceFeatures = map.querySourceFeatures('places');
@@ -205,7 +220,7 @@
                 document.getElementById("points_no").innerText = uniqueIds.size;
                 document.getElementById("points_container").classList.remove("none");
             }
-        });
+        });*/
     });
 
 
